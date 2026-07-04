@@ -1,7 +1,10 @@
 #!/usr/bin/env python
+from __future__ import annotations
 
 import argparse
+import os
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 try:
@@ -33,6 +36,7 @@ def main() -> None:
     parser.add_argument("--num_points", type=int, default=30000)
     parser.add_argument("--sampling", default="fps", choices=("fps", "random", "stride", "first"))
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--num_workers", type=int, default=min(8, os.cpu_count() or 1))
     parser.add_argument("--limit", type=int)
     parser.add_argument("--curvature", action="store_true", help="Compute discrete mean-curvature features.")
     parser.add_argument("--allow_missing_labels", action="store_true")
@@ -68,6 +72,7 @@ def main() -> None:
         num_points=num_points,
         sampling=args.sampling,
         seed=seed,
+        num_workers=args.num_workers,
         limit=args.limit,
         require_labels=not args.allow_missing_labels,
         compute_curvature=args.curvature,
@@ -85,6 +90,7 @@ def preprocess_split(args: argparse.Namespace, records: list, split: str, num_po
         num_points=num_points,
         sampling=args.sampling,
         seed=seed,
+        num_workers=args.num_workers,
         limit=args.limit,
         require_labels=not args.allow_missing_labels,
         compute_curvature=args.curvature,
@@ -99,6 +105,7 @@ def preprocess_records(
     num_points: int,
     sampling: str,
     seed: int,
+    num_workers: int,
     limit: int | None,
     require_labels: bool,
     compute_curvature: bool,
@@ -112,29 +119,69 @@ def preprocess_records(
     if limit:
         selected_records = selected_records[:limit]
 
+    logger.info("Using %s worker(s)", max(1, num_workers))
     errors = []
-    for offset, record in enumerate(tqdm(selected_records, desc=desc)):
-        try:
-            raw = load_raw_scan(record)
-            sample = build_processed_sample(
-                raw,
-                num_points=num_points,
-                sampling=sampling,
-                seed=seed + offset,
-                require_labels=require_labels,
-                compute_curvature=compute_curvature,
-            )
-            out_path = out_dir / f"{record.scan_id}.pt"
-            save_processed_sample(sample, out_path)
-        except Exception as exc:
-            message = str(exc)
-            errors.append((record.scan_id, message))
-            logger.warning("Skipped %s: %s", record.scan_id, message)
+    worker_args = [
+        (
+            offset,
+            record,
+            out_dir,
+            num_points,
+            sampling,
+            seed,
+            require_labels,
+            compute_curvature,
+        )
+        for offset, record in enumerate(selected_records)
+    ]
+
+    if max(1, num_workers) == 1:
+        for item in tqdm(worker_args, desc=desc):
+            result = _preprocess_one_record(item)
+            if result[1] is not None:
+                errors.append(result)
+                logger.warning("Skipped %s: %s", result[0], result[1])
+    else:
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(_preprocess_one_record, item) for item in worker_args]
+            for future in tqdm(as_completed(futures), total=len(futures), desc=desc):
+                result = future.result()
+                if result[1] is not None:
+                    errors.append(result)
+                    logger.warning("Skipped %s: %s", result[0], result[1])
 
     logger.info("Discovered %s scans", len(selected_records))
     logger.info("Wrote %s samples to %s", len(selected_records) - len(errors), out_dir)
     if errors:
         logger.warning("Skipped %s scans with errors", len(errors))
+
+
+def _preprocess_one_record(args: tuple) -> tuple[str, str | None]:
+    (
+        offset,
+        record,
+        out_dir,
+        num_points,
+        sampling,
+        seed,
+        require_labels,
+        compute_curvature,
+    ) = args
+    try:
+        raw = load_raw_scan(record)
+        sample = build_processed_sample(
+            raw,
+            num_points=num_points,
+            sampling=sampling,
+            seed=seed + offset,
+            require_labels=require_labels,
+            compute_curvature=compute_curvature,
+        )
+        out_path = out_dir / f"{record.scan_id}.pt"
+        save_processed_sample(sample, out_path)
+        return record.scan_id, None
+    except Exception as exc:
+        return record.scan_id, str(exc)
 
 
 def _read_split_file(path: str | None) -> set[str] | None:
