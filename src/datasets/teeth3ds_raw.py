@@ -124,7 +124,13 @@ def build_processed_sample(
     tooth_centers_norm = normalize_tooth_centers(tooth_centers_raw, center, scale)
     curvature_all = compute_mean_curvature_magnitude(pos_norm_all, faces) if compute_curvature else None
 
-    source_indices = sample_vertex_indices(len(vertices), num_points, method=sampling, seed=seed)
+    source_indices = sample_vertex_indices(
+        len(vertices),
+        num_points,
+        method=sampling,
+        seed=seed,
+        points=pos_norm_all,
+    )
 
     pos_raw = vertices[source_indices].astype(np.float32)
     pos = pos_norm_all[source_indices].astype(np.float32)
