@@ -15,7 +15,7 @@ This project is not intended for clinical diagnosis. The geometric measurements
 are research indices derived from public annotations and must be interpreted as
 anatomical consistency signals.
 
-![OrthoGeo3D segmentation examples](docs/assets/orthotwin3d_segmentation_examples.png)
+![OrthoGeo3D segmentation examples](doc/assets/orthotwin3d_segmentation_examples.png)
 
 ## Research Plan
 
