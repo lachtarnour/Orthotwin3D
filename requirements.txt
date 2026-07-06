@@ -5,3 +5,4 @@ tqdm
 trimesh
 matplotlib
 fpsample
+wandb 
