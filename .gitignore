@@ -1,5 +1,10 @@
-.venv/
 __pycache__/
-.env
+*.py[cod]
+.DS_Store
 .vscode/
+
+# Local environments
+.env
+.venv/
+data/
 outputs/

@@ -98,13 +98,6 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Optional: define an external data directory in `.env`.
-
-```bash
-DATA_DIR=/path/to/data
-```
-
-Without `.env`, the project uses `data/`.
 
 ## Usage
 
@@ -132,25 +125,6 @@ Check the processed dataset:
 python scripts/check_dataset_integrity.py
 ```
 
-Quickly test the segmentation dataloader:
-
-```bash
-python - <<'PY'
-from src.datasets import create_segmentation_dataloader
-
-loader = create_segmentation_dataloader("configs/data.yaml", split="train", limit=2)
-batch = next(iter(loader))
-print(batch["x"].shape)  # [B, 30000, 6]
-print(batch["y"].shape)  # [B, 30000]
-PY
-```
-
-Run the tests:
-
-```bash
-python -m unittest discover -s tests
-```
-
 Run the DGCNN segmentation training:
 
 ```bash
@@ -161,21 +135,6 @@ The training config uses all train/val scans and randomly samples 4096 points
 per scan inside the training loop from the 30000-point dataloader batch. The
 processed dataset and dataloader keep the full 30000-point contract; the trainer
 samples the model batch.
-
-Run outputs are written to:
-
-```text
-outputs/experiments/<experiment_name>/
-```
-
-with:
-
-```text
-config.yaml
-metrics.jsonl
-checkpoints/last.pt
-checkpoints/best.pt
-```
 
 Resume from a checkpoint:
 
