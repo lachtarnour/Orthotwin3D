@@ -2,7 +2,7 @@
 
 DGCNN pipeline for 3D intra-oral tooth segmentation on Teeth3DS.
 
-![OrthoTwin3D segmentation examples](doc/assets/orthotwin3d_segmentation_examples.png)
+![DGCNN full-scan qualitative inference](doc/assets/inference_segmentation_baseline.png)
 
 ## Project Plan
 
@@ -53,6 +53,12 @@ patient-disjoint Teeth3DS split.
 | Objective | Cross-entropy + Dice + 0.5 binary tooth/background loss |
 | Evaluation | Two fixed validation views; best checkpoint selected by validation mIoU |
 | Training control | ReduceLROnPlateau (`factor=0.8`, `patience=2`) and early stopping (`patience=7`, `min_delta=0.001`) |
+
+### Qualitative Inference
+
+The opening figure shows a validation scan inferred with the augmented DGCNN
+checkpoint and multi-view majority voting over the full 60,000-point processed
+scan.
 
 ### Results
 

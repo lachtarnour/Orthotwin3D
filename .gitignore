@@ -13,9 +13,6 @@ env/
 # Local run tracking
 wandb/
 
-# Local exploratory notebooks
-notebooks/
-
 # Local docs excluded from this repo sync
 docs/
 
